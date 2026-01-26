@@ -47,7 +47,8 @@ class MusicManager:
         self,
         clip_data: dict,
         prompt_data: dict,
-        audio_path: str
+        audio_path: str,
+        audio_data: bytes = None
     ) -> dict:
         """
         생성된 곡 정보 저장
@@ -56,6 +57,7 @@ class MusicManager:
             clip_data: Suno API에서 받은 클립 데이터
             prompt_data: 프롬프트 생성기에서 받은 데이터
             audio_path: 저장된 오디오 파일 경로
+            audio_data: 오디오 파일 bytes 데이터 (Streamlit Cloud용)
 
         Returns:
             저장된 곡 정보
@@ -87,7 +89,14 @@ class MusicManager:
             # audio_path에서 output1/output2 판단 (output1=odd, output2=even)
             audio_path_obj = Path(audio_path)
             is_odd = "output1" in str(audio_path_obj.parent)  # output1 폴더면 홀수(odd)
-            self.drive_manager.upload_file(str(audio_path), is_odd=is_odd)
+
+            # audio_data가 있으면 메모리에서 직접 업로드 (Streamlit Cloud용)
+            if audio_data:
+                file_name = audio_path_obj.name
+                self.drive_manager.upload_file(file_data=audio_data, file_name=file_name, is_odd=is_odd)
+            else:
+                # 로컬 파일에서 업로드
+                self.drive_manager.upload_file(str(audio_path), is_odd=is_odd)
 
         return song_info
 

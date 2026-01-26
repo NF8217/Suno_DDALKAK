@@ -232,15 +232,19 @@ class SunoClient:
         """단일 클립 정보 조회 (호환성 유지)"""
         return {}
 
-    def download_audio(self, audio_url: str, save_path: str) -> str:
-        """오디오 파일 다운로드"""
+    def download_audio(self, audio_url: str, save_path: str) -> tuple:
+        """오디오 파일 다운로드 (파일 + bytes 데이터 반환)"""
         response = requests.get(audio_url, stream=True)
 
         if response.status_code != 200:
             raise Exception(f"다운로드 실패: {response.status_code}")
 
+        # 메모리에 데이터 저장
+        audio_data = b''
+
         with open(save_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
+                audio_data += chunk
 
-        return save_path
+        return save_path, audio_data

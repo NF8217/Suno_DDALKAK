@@ -898,13 +898,14 @@ def generate_single_song(prompt_data: dict):
                     clip_index=clip_index
                 )
 
-                st.session_state.suno_client.download_audio(audio_url, str(save_path))
+                save_path, audio_data = st.session_state.suno_client.download_audio(audio_url, str(save_path))
 
                 # 메타데이터 저장
                 st.session_state.music_manager.save_song(
                     clip_data=clip,
                     prompt_data=prompt_data,
-                    audio_path=str(save_path)
+                    audio_path=str(save_path),
+                    audio_data=audio_data
                 )
 
         progress.progress(100, text="완료!")
@@ -980,11 +981,12 @@ def generate_batch_songs(
                         clip.get("id", ""),
                         clip_index=clip_index
                     )
-                    st.session_state.suno_client.download_audio(audio_url, str(save_path))
+                    save_path, audio_data = st.session_state.suno_client.download_audio(audio_url, str(save_path))
                     st.session_state.music_manager.save_song(
                         clip_data=clip,
                         prompt_data=prompt_data,
-                        audio_path=str(save_path)
+                        audio_path=str(save_path),
+                        audio_data=audio_data
                     )
 
             success_count += 1

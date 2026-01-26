@@ -5,8 +5,9 @@ from pathlib import Path
 from typing import Optional
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaFileUpload, MediaIoBaseUpload
 import streamlit as st
+import io
 
 
 class GoogleDriveManager:
@@ -103,12 +104,14 @@ class GoogleDriveManager:
             print(f"폴더 생성/조회 실패 ({folder_name}): {e}")
             return ""
 
-    def upload_file(self, file_path: str, is_odd: bool) -> bool:
+    def upload_file(self, file_path: str = None, file_data: bytes = None, file_name: str = None, is_odd: bool = True) -> bool:
         """
         파일을 Google Drive에 업로드
 
         Args:
-            file_path: 업로드할 파일 경로
+            file_path: 업로드할 파일 경로 (선택)
+            file_data: 업로드할 파일 데이터 bytes (선택)
+            file_name: 파일 이름 (file_data 사용 시 필수)
             is_odd: True면 odd 폴더, False면 even 폴더
 
         Returns:
@@ -118,15 +121,25 @@ class GoogleDriveManager:
             return False
 
         try:
-            file_path_obj = Path(file_path)
-            if not file_path_obj.exists():
-                return False
-
             folder_id = self.odd_folder_id if is_odd else self.even_folder_id
             if not folder_id:
                 return False
 
-            file_name = file_path_obj.name
+            # 파일 경로 또는 데이터 중 하나는 필수
+            if file_path:
+                file_path_obj = Path(file_path)
+                if not file_path_obj.exists():
+                    # 파일이 없으면 스킵 (에러는 출력)
+                    print(f"파일이 존재하지 않음: {file_path}")
+                    return False
+                file_name = file_path_obj.name
+                mime_type = 'audio/mpeg' if file_name.endswith('.mp3') else 'application/octet-stream'
+                media = MediaFileUpload(str(file_path), mimetype=mime_type, resumable=True)
+            elif file_data and file_name:
+                mime_type = 'audio/mpeg' if file_name.endswith('.mp3') else 'application/octet-stream'
+                media = MediaIoBaseUpload(io.BytesIO(file_data), mimetype=mime_type, resumable=True)
+            else:
+                return False
 
             # 기존 파일 검색 (덮어쓰기)
             query = f"name='{file_name}' and '{folder_id}' in parents and trashed=false"
@@ -137,11 +150,6 @@ class GoogleDriveManager:
             ).execute()
 
             items = results.get('files', [])
-
-            # MIME 타입 감지
-            mime_type = 'audio/mpeg' if file_name.endswith('.mp3') else 'application/octet-stream'
-
-            media = MediaFileUpload(str(file_path), mimetype=mime_type, resumable=True)
 
             if items:
                 # 업데이트
@@ -162,10 +170,11 @@ class GoogleDriveManager:
                     fields='id'
                 ).execute()
 
+            print(f"✓ Google Drive 업로드 성공: {file_name} ({'odd' if is_odd else 'even'})")
             return True
 
         except Exception as e:
-            print(f"파일 업로드 실패 ({file_path}): {e}")
+            print(f"파일 업로드 실패 ({file_name or file_path}): {e}")
             return False
 
     def upload_metadata(self, metadata_path: str) -> bool:
