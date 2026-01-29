@@ -49,5 +49,5 @@ MAX_WAIT_TIME = 300  # 최대 대기 시간 (초)
 
 # Google Drive 설정
 GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "")  # Drive 루트 폴더 ID
-GOOGLE_CREDENTIALS_PATH = os.getenv("GOOGLE_CREDENTIALS_PATH", "google-credentials.json")  # 로컬용 JSON 파일
+GOOGLE_CREDENTIALS_PATH = str(BASE_DIR / os.getenv("GOOGLE_CREDENTIALS_PATH", "google-credentials.json"))  # 로컬용 JSON 파일 (절대 경로)
 GOOGLE_DRIVE_ENABLED = bool(GOOGLE_DRIVE_FOLDER_ID)  # 폴더 ID가 있으면 활성화

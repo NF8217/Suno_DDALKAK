@@ -111,12 +111,20 @@ if "suno_client" not in st.session_state:
     st.session_state.suno_client = None
 if "prompt_generator" not in st.session_state:
     st.session_state.prompt_generator = None
-if "drive_manager" not in st.session_state:
-    # Google Drive Manager 초기화
+if "drive_manager" not in st.session_state or st.session_state.drive_manager is None:
+    st.session_state.drive_init_error = None
+    # Google Drive Manager 초기화 (실패 시 재시도)
     if config.GOOGLE_DRIVE_ENABLED:
         try:
             # Streamlit Cloud: secrets에서 credentials 가져오기
-            if hasattr(st, 'secrets') and 'google_credentials' in st.secrets:
+            use_secrets = False
+            try:
+                if hasattr(st, 'secrets') and 'google_credentials' in st.secrets:
+                    use_secrets = True
+            except:
+                pass  # secrets.toml 없으면 로컬 모드 사용
+
+            if use_secrets:
                 credentials_dict = dict(st.secrets['google_credentials'])
                 folder_id = st.secrets.get('GOOGLE_DRIVE_FOLDER_ID', config.GOOGLE_DRIVE_FOLDER_ID)
                 st.session_state.drive_manager = GoogleDriveManager(
@@ -129,9 +137,12 @@ if "drive_manager" not in st.session_state:
                     folder_id=config.GOOGLE_DRIVE_FOLDER_ID,
                     credentials_path=config.GOOGLE_CREDENTIALS_PATH
                 )
+            # 연결 실패 시 에러 저장
+            if st.session_state.drive_manager and not st.session_state.drive_manager.is_connected():
+                st.session_state.drive_init_error = "service=None (인증 실패)"
         except Exception as e:
             st.session_state.drive_manager = None
-            print(f"Google Drive 초기화 실패: {e}")
+            st.session_state.drive_init_error = str(e)
     else:
         st.session_state.drive_manager = None
 if "music_manager" not in st.session_state:
