@@ -118,11 +118,14 @@ class GoogleDriveManager:
             성공 여부
         """
         if not self.service:
+            print("[DEBUG] upload_file: service is None")
             return False
 
         try:
             folder_id = self.odd_folder_id if is_odd else self.even_folder_id
+            print(f"[DEBUG] upload_file: folder_id={folder_id}, is_odd={is_odd}, odd_id={self.odd_folder_id}, even_id={self.even_folder_id}")
             if not folder_id:
+                print("[DEBUG] upload_file: folder_id is empty")
                 return False
 
             # 파일 경로 또는 데이터 중 하나는 필수
@@ -130,15 +133,17 @@ class GoogleDriveManager:
                 file_path_obj = Path(file_path)
                 if not file_path_obj.exists():
                     # 파일이 없으면 스킵 (에러는 출력)
-                    print(f"파일이 존재하지 않음: {file_path}")
+                    print(f"[DEBUG] 파일이 존재하지 않음: {file_path}")
                     return False
                 file_name = file_path_obj.name
                 mime_type = 'audio/mpeg' if file_name.endswith('.mp3') else 'application/octet-stream'
                 media = MediaFileUpload(str(file_path), mimetype=mime_type, resumable=True)
             elif file_data and file_name:
+                print(f"[DEBUG] upload_file: using file_data, file_name={file_name}, data_len={len(file_data) if file_data else 0}")
                 mime_type = 'audio/mpeg' if file_name.endswith('.mp3') else 'application/octet-stream'
                 media = MediaIoBaseUpload(io.BytesIO(file_data), mimetype=mime_type, resumable=True)
             else:
+                print(f"[DEBUG] upload_file: no file_path and no file_data/file_name")
                 return False
 
             # 기존 파일 검색 (덮어쓰기)
