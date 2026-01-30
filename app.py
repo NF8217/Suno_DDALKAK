@@ -912,12 +912,18 @@ def generate_single_song(prompt_data: dict):
                 save_path, audio_data = st.session_state.suno_client.download_audio(audio_url, str(save_path))
 
                 # 메타데이터 저장
-                st.session_state.music_manager.save_song(
+                song_info = st.session_state.music_manager.save_song(
                     clip_data=clip,
                     prompt_data=prompt_data,
                     audio_path=str(save_path),
                     audio_data=audio_data
                 )
+
+                # Drive 업로드 결과 표시
+                if song_info.get("drive_upload"):
+                    st.success(f"☁️ Drive 업로드 성공: {Path(save_path).name}")
+                elif song_info.get("drive_error"):
+                    st.warning(f"☁️ Drive 업로드 실패: {song_info['drive_error']}")
 
         progress.progress(100, text="완료!")
         st.success(f"🎉 {len(clips)}곡 생성 완료!")
@@ -993,12 +999,18 @@ def generate_batch_songs(
                         clip_index=clip_index
                     )
                     save_path, audio_data = st.session_state.suno_client.download_audio(audio_url, str(save_path))
-                    st.session_state.music_manager.save_song(
+                    song_info = st.session_state.music_manager.save_song(
                         clip_data=clip,
                         prompt_data=prompt_data,
                         audio_path=str(save_path),
                         audio_data=audio_data
                     )
+
+                    # Drive 업로드 결과 표시
+                    if song_info.get("drive_upload"):
+                        status_container.success(f"☁️ Drive 업로드 성공")
+                    elif song_info.get("drive_error"):
+                        status_container.warning(f"☁️ Drive 실패: {song_info['drive_error']}")
 
             success_count += 1
 
