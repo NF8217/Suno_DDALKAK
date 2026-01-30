@@ -87,6 +87,7 @@ class MusicManager:
         # Google Drive에 mp3 업로드
         upload_success = False
         upload_error = None
+        print(f"[DEBUG] save_song: drive_manager={self.drive_manager is not None}, connected={self.drive_manager.is_connected() if self.drive_manager else False}, audio_data={audio_data is not None}, audio_data_len={len(audio_data) if audio_data else 0}")
         if self.drive_manager and self.drive_manager.is_connected():
             try:
                 # audio_path에서 output1/output2 판단 (output1=odd, output2=even)
@@ -96,12 +97,16 @@ class MusicManager:
                 # audio_data가 있으면 메모리에서 직접 업로드 (Streamlit Cloud용)
                 if audio_data:
                     file_name = audio_path_obj.name
+                    print(f"[DEBUG] save_song: calling upload_file with file_data, file_name={file_name}")
                     upload_success = self.drive_manager.upload_file(file_data=audio_data, file_name=file_name, is_odd=is_odd)
                 else:
                     # 로컬 파일에서 업로드
+                    print(f"[DEBUG] save_song: calling upload_file with file_path={audio_path}")
                     upload_success = self.drive_manager.upload_file(str(audio_path), is_odd=is_odd)
+                print(f"[DEBUG] save_song: upload_success={upload_success}")
             except Exception as e:
                 upload_error = str(e)
+                print(f"[DEBUG] save_song: exception={e}")
 
         song_info["drive_upload"] = upload_success
         song_info["drive_error"] = upload_error
