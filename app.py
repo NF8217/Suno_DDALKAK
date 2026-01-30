@@ -147,6 +147,9 @@ if "drive_manager" not in st.session_state or st.session_state.drive_manager is 
         st.session_state.drive_manager = None
 if "music_manager" not in st.session_state:
     st.session_state.music_manager = MusicManager(drive_manager=st.session_state.get("drive_manager"))
+# drive_manager가 나중에 연결되면 music_manager에도 반영
+if st.session_state.get("drive_manager") and st.session_state.music_manager:
+    st.session_state.music_manager.drive_manager = st.session_state.drive_manager
 if "generated_songs" not in st.session_state:
     st.session_state.generated_songs = []
 if "is_generating" not in st.session_state:
