@@ -923,6 +923,10 @@ def generate_single_song(prompt_data: dict):
                 )
 
                 # Drive 업로드 결과 표시
+                dm = st.session_state.music_manager.drive_manager
+                dm_connected = dm.is_connected() if dm else False
+                st.info(f"[DEBUG] drive_manager={dm is not None}, connected={dm_connected}, upload={song_info.get('drive_upload')}, err={song_info.get('drive_error')}")
+
                 if song_info.get("drive_upload"):
                     st.success(f"☁️ Drive 업로드 성공: {Path(save_path).name}")
                 elif song_info.get("drive_error"):
