@@ -48,7 +48,8 @@ class MusicManager:
         clip_data: dict,
         prompt_data: dict,
         audio_path: str,
-        audio_data: bytes = None
+        audio_data: bytes = None,
+        genre: str = None
     ) -> dict:
         """
         생성된 곡 정보 저장
@@ -58,6 +59,7 @@ class MusicManager:
             prompt_data: 프롬프트 생성기에서 받은 데이터
             audio_path: 저장된 오디오 파일 경로
             audio_data: 오디오 파일 bytes 데이터 (Streamlit Cloud용)
+            genre: 장르 (Drive 장르별 폴더 저장용)
 
         Returns:
             저장된 곡 정보
@@ -69,6 +71,7 @@ class MusicManager:
             "style": prompt_data.get("style", ""),
             "lyrics": prompt_data.get("lyrics", ""),
             "theme": prompt_data.get("theme", ""),
+            "genre": genre or "",
             "audio_url": clip_data.get("audio_url", ""),
             "audio_path": str(audio_path),
             "image_url": clip_data.get("image_url", ""),
@@ -87,7 +90,6 @@ class MusicManager:
         # Google Drive에 mp3 업로드
         upload_success = False
         upload_error = None
-        print(f"[DEBUG] save_song: drive_manager={self.drive_manager is not None}, connected={self.drive_manager.is_connected() if self.drive_manager else False}, audio_data={audio_data is not None}, audio_data_len={len(audio_data) if audio_data else 0}")
         if self.drive_manager and self.drive_manager.is_connected():
             try:
                 # audio_path에서 output1/output2 판단 (output1=odd, output2=even)
@@ -97,16 +99,12 @@ class MusicManager:
                 # audio_data가 있으면 메모리에서 직접 업로드 (Streamlit Cloud용)
                 if audio_data:
                     file_name = audio_path_obj.name
-                    print(f"[DEBUG] save_song: calling upload_file with file_data, file_name={file_name}")
-                    upload_success = self.drive_manager.upload_file(file_data=audio_data, file_name=file_name, is_odd=is_odd)
+                    upload_success = self.drive_manager.upload_file(file_data=audio_data, file_name=file_name, is_odd=is_odd, genre=genre)
                 else:
                     # 로컬 파일에서 업로드
-                    print(f"[DEBUG] save_song: calling upload_file with file_path={audio_path}")
-                    upload_success = self.drive_manager.upload_file(str(audio_path), is_odd=is_odd)
-                print(f"[DEBUG] save_song: upload_success={upload_success}")
+                    upload_success = self.drive_manager.upload_file(str(audio_path), is_odd=is_odd, genre=genre)
             except Exception as e:
                 upload_error = str(e)
-                print(f"[DEBUG] save_song: exception={e}")
 
         song_info["drive_upload"] = upload_success
         song_info["drive_error"] = upload_error

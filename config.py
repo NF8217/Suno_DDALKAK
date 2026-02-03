@@ -51,3 +51,24 @@ MAX_WAIT_TIME = 300  # 최대 대기 시간 (초)
 GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "")  # Drive 루트 폴더 ID
 GOOGLE_CREDENTIALS_PATH = str(BASE_DIR / os.getenv("GOOGLE_CREDENTIALS_PATH", "google-credentials.json"))  # 로컬용 JSON 파일 (절대 경로)
 GOOGLE_DRIVE_ENABLED = bool(GOOGLE_DRIVE_FOLDER_ID)  # 폴더 ID가 있으면 활성화
+
+# 장르 목록 (Drive 폴더 구조용)
+GENRE_LIST = [
+    "팝",
+    "발라드",
+    "힙합",
+    "R&B",
+    "록",
+    "EDM",
+    "재즈",
+    "시티팝",
+    "Lo-fi",
+    "클래식",
+    "기타"
+]
+
+# 동시 생성 설정
+MAX_PARALLEL_GENERATIONS = 2  # 동시 생성 최대 개수
+
+# 작업 관리
+PENDING_TASKS_FILE = BASE_DIR / "pending_tasks.json"

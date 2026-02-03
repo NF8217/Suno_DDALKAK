@@ -248,3 +248,56 @@ class SunoClient:
                 audio_data += chunk
 
         return save_path, audio_data
+
+    def generate_async(
+        self,
+        prompt: str,
+        style: str = "",
+        title: str = "",
+        instrumental: bool = False,
+        model: str = "V4"
+    ) -> str:
+        """
+        음악 생성 요청 (비동기 - task_id만 반환)
+
+        Args:
+            prompt: 가사 또는 음악 설명
+            style: 음악 스타일
+            title: 곡 제목
+            instrumental: 인스트루멘탈 여부
+            model: 모델 선택
+
+        Returns:
+            task_id
+        """
+        payload = {
+            "customMode": True,
+            "instrumental": instrumental,
+            "model": model,
+            "callBackUrl": self.CALLBACK_URL,
+            "prompt": prompt,
+            "style": style or "pop, catchy",
+            "title": title or "Untitled",
+        }
+
+        task_id = self._api_request("POST", "/api/v1/generate", json=payload)
+
+        if isinstance(task_id, dict):
+            task_id = task_id.get("taskId")
+
+        if not task_id:
+            raise Exception("음악 생성 실패: taskId를 받지 못했습니다")
+
+        return task_id
+
+    def wait_for_completion(self, task_id: str) -> list:
+        """
+        태스크 완료 대기 및 결과 반환
+
+        Args:
+            task_id: Suno task ID
+
+        Returns:
+            생성된 음악 정보 리스트
+        """
+        return self._wait_for_task(task_id)

@@ -4,13 +4,22 @@ Suno Automation - Streamlit UI
 import streamlit as st
 import time
 import random
+import json
 from pathlib import Path
 
 import config
+
+# Suno 스타일 프리셋 로드
+SUNO_PRESETS = {}
+_presets_path = Path(__file__).parent / "prompts" / "suno_prompts.json"
+if _presets_path.exists():
+    with open(_presets_path, "r", encoding="utf-8") as f:
+        SUNO_PRESETS = json.load(f)
 from services.suno_client import SunoClient
 from services.prompt_generator import PromptGenerator
 from services.music_manager import MusicManager
 from services.google_drive_manager import GoogleDriveManager
+from services.task_manager import TaskManager
 
 # 장르별 옵션 매핑
 GENRE_OPTIONS = {
@@ -154,6 +163,8 @@ if "generated_songs" not in st.session_state:
     st.session_state.generated_songs = []
 if "is_generating" not in st.session_state:
     st.session_state.is_generating = False
+if "task_manager" not in st.session_state:
+    st.session_state.task_manager = TaskManager()
 if "current_audio_url" not in st.session_state:
     st.session_state.current_audio_url = ""
 if "current_audio_title" not in st.session_state:
@@ -236,7 +247,7 @@ def main():
             """)
 
     # 메인 탭
-    tab1, tab2, tab3, tab4 = st.tabs(["🎹 음악 생성", "📚 생성 목록", "⚡ 대량 생성", "📥 내 라이브러리"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎹 음악 생성", "⚡ 대량 생성", "🔀 동시 생성", "📚 생성 목록", "📥 내 라이브러리"])
 
     # 탭 1: 단일 음악 생성
     with tab1:
@@ -399,8 +410,8 @@ def main():
             else:
                 st.info("프롬프트를 생성하거나 직접 입력해주세요")
 
-    # 탭 2: 생성 목록
-    with tab2:
+    # 탭 4: 생성 목록
+    with tab4:
         st.header("생성된 음악 목록")
 
         songs = st.session_state.music_manager.get_recent_songs(50)
@@ -447,8 +458,8 @@ def main():
                                     mime="audio/mpeg"
                                 )
 
-    # 탭 3: 대량 생성
-    with tab3:
+    # 탭 2: 대량 생성
+    with tab2:
         st.header("대량 음악 생성")
 
         st.warning("⚠️ Pro 플랜 기준 하루 약 100곡 (500 크레딧) 제한이 있습니다")
@@ -504,83 +515,160 @@ def main():
         with col2:
             st.subheader("생성 설정")
 
-            batch_genre = st.selectbox(
-                "🎸 장르",
-                list(GENRE_OPTIONS.keys()),
-                key="batch_genre"
+            # 스타일 입력 방식 선택
+            style_input_mode = st.radio(
+                "스타일 설정 방식",
+                ["옵션 선택", "직접 입력"],
+                horizontal=True,
+                key="batch_style_mode"
             )
 
-            # 시티팝 프리셋 선택
-            citypop_preset = None
+            batch_style_direct = None
+            batch_genre = None
+            batch_mood = None
+            batch_tempo = None
+            batch_sound_texture = None
+            batch_language = "Korean"
+            batch_gender = "Random"
+            batch_age = "youthful"
+            batch_instrumental = False
             citypop_style_override = None
-            if batch_genre == "시티팝":
-                citypop_preset_name = st.selectbox(
-                    "🌃 시티팝 타입",
-                    ["직접 설정"] + list(CITYPOP_PRESETS.keys()),
-                    key="batch_citypop_type"
-                )
-                if citypop_preset_name != "직접 설정":
-                    citypop_preset = CITYPOP_PRESETS[citypop_preset_name]
-                    citypop_style_override = citypop_preset["style"]
 
-            # 장르에 맞는 옵션만 표시
-            if batch_genre in GENRE_OPTIONS:
-                batch_opts = GENRE_OPTIONS[batch_genre]
+            if style_input_mode == "직접 입력":
+                # 프리셋 선택 (있으면)
+                if SUNO_PRESETS:
+                    preset_genre = st.selectbox(
+                        "🎸 프리셋 장르",
+                        ["직접 입력"] + list(SUNO_PRESETS.keys()),
+                        key="batch_preset_genre"
+                    )
 
-                if citypop_preset:
-                    tempo_options = [citypop_preset["tempo"]]
-                    mood_options = [citypop_preset["mood"]]
-                    texture_options = citypop_preset["sound_texture_options"]
+                    if preset_genre != "직접 입력":
+                        preset_styles = SUNO_PRESETS[preset_genre]
+                        preset_name = st.selectbox(
+                            "🎵 스타일 프리셋",
+                            list(preset_styles.keys()),
+                            key="batch_preset_style"
+                        )
+                        selected_preset = preset_styles[preset_name]
+                        batch_style_direct = selected_preset["style"]
+                        st.caption(f"⚡ Energy: {selected_preset['energy']}/10 | 💡 {selected_preset['use_case']}")
+                        st.code(batch_style_direct, language=None)
+                    else:
+                        # 직접 입력
+                        batch_style_direct = st.text_area(
+                            "🎨 스타일 프롬프트",
+                            placeholder="K-pop, energetic, female vocal, synth, upbeat, catchy melody",
+                            height=100,
+                            key="batch_style_direct"
+                        )
+                        st.caption("💡 Suno 스타일 태그를 직접 입력하세요 (쉼표로 구분)")
                 else:
-                    tempo_options = batch_opts["tempo"]
-                    mood_options = batch_opts["mood"]
-                    texture_options = batch_opts["sound_texture"]
+                    # 프리셋 파일 없으면 직접 입력만
+                    batch_style_direct = st.text_area(
+                        "🎨 스타일 프롬프트",
+                        placeholder="K-pop, energetic, female vocal, synth, upbeat, catchy melody",
+                        height=100,
+                        key="batch_style_direct"
+                    )
+                    st.caption("💡 Suno 스타일 태그를 직접 입력하세요 (쉼표로 구분)")
 
-                batch_tempo = st.selectbox(
-                    "⏱️ 템포",
-                    tempo_options,
-                    key="batch_tempo"
-                )
+                col_lang, col_gen = st.columns(2)
+                with col_lang:
+                    batch_language = st.selectbox(
+                        "🌍 언어",
+                        ["Korean", "Japanese", "English", "Korean + English", "Japanese + English"],
+                        key="batch_language_direct"
+                    )
+                with col_gen:
+                    batch_gender = st.selectbox(
+                        "👤 성별",
+                        ["Random", "Male", "Female"],
+                        key="batch_gender_direct"
+                    )
 
-                batch_mood = st.selectbox(
-                    "🌈 분위기",
-                    mood_options,
-                    key="batch_mood"
-                )
+                batch_instrumental = st.checkbox("🎹 인스트루멘탈", key="batch_inst_direct")
 
-                batch_sound_texture = st.selectbox(
-                    "🔊 사운드 질감",
-                    texture_options,
-                    key="batch_sound_texture"
-                )
-
-            col_lang, col_gen, col_age = st.columns(3)
-            with col_lang:
-                batch_language = st.selectbox(
-                    "🌍 언어",
-                    ["Korean", "Japanese", "English", "Korean + English", "Japanese + English"],
-                    key="batch_language"
-                )
-            with col_gen:
-                batch_gender = st.selectbox(
-                    "👤 성별",
-                    ["Random", "Male", "Female"],
-                    key="batch_gender"
-                )
-            with col_age:
-                batch_age = st.selectbox(
-                    "🎤 보컬 나이",
-                    ["youthful", "mature", "aged"],
-                    key="batch_age"
+            else:
+                # 기존 옵션 선택 방식
+                batch_genre = st.selectbox(
+                    "🎸 장르",
+                    list(GENRE_OPTIONS.keys()),
+                    key="batch_genre"
                 )
 
-            batch_instrumental = st.checkbox("🎹 인스트루멘탈", key="batch_inst")
+                # 시티팝 프리셋 선택
+                citypop_preset = None
+                if batch_genre == "시티팝":
+                    citypop_preset_name = st.selectbox(
+                        "🌃 시티팝 타입",
+                        ["직접 설정"] + list(CITYPOP_PRESETS.keys()),
+                        key="batch_citypop_type"
+                    )
+                    if citypop_preset_name != "직접 설정":
+                        citypop_preset = CITYPOP_PRESETS[citypop_preset_name]
+                        citypop_style_override = citypop_preset["style"]
+
+                # 장르에 맞는 옵션만 표시
+                if batch_genre in GENRE_OPTIONS:
+                    batch_opts = GENRE_OPTIONS[batch_genre]
+
+                    if citypop_preset:
+                        tempo_options = [citypop_preset["tempo"]]
+                        mood_options = [citypop_preset["mood"]]
+                        texture_options = citypop_preset["sound_texture_options"]
+                    else:
+                        tempo_options = batch_opts["tempo"]
+                        mood_options = batch_opts["mood"]
+                        texture_options = batch_opts["sound_texture"]
+
+                    batch_tempo = st.selectbox(
+                        "⏱️ 템포",
+                        tempo_options,
+                        key="batch_tempo"
+                    )
+
+                    batch_mood = st.selectbox(
+                        "🌈 분위기",
+                        mood_options,
+                        key="batch_mood"
+                    )
+
+                    batch_sound_texture = st.selectbox(
+                        "🔊 사운드 질감",
+                        texture_options,
+                        key="batch_sound_texture"
+                    )
+
+                col_lang, col_gen, col_age = st.columns(3)
+                with col_lang:
+                    batch_language = st.selectbox(
+                        "🌍 언어",
+                        ["Korean", "Japanese", "English", "Korean + English", "Japanese + English"],
+                        key="batch_language"
+                    )
+                with col_gen:
+                    batch_gender = st.selectbox(
+                        "👤 성별",
+                        ["Random", "Male", "Female"],
+                        key="batch_gender"
+                    )
+                with col_age:
+                    batch_age = st.selectbox(
+                        "🎤 보컬 나이",
+                        ["youthful", "mature", "aged"],
+                        key="batch_age"
+                    )
+
+                batch_instrumental = st.checkbox("🎹 인스트루멘탈", key="batch_inst")
 
             st.divider()
 
             # 스타일 프롬프트 미리보기
             if themes:
-                if citypop_style_override:
+                if batch_style_direct:
+                    style_preview = batch_style_direct
+                elif citypop_style_override:
                     style_preview = citypop_style_override
                 else:
                     gender_display = "Male/Female (랜덤)" if batch_gender == "Random" else batch_gender
@@ -600,6 +688,8 @@ def main():
                 elif not st.session_state.suno_client:
                     st.error("먼저 API를 연결해주세요")
                 else:
+                    # 직접 입력 스타일 우선 사용
+                    final_style_override = batch_style_direct or citypop_style_override
                     generate_batch_songs(
                         themes=themes,
                         genre=batch_genre,
@@ -610,11 +700,11 @@ def main():
                         tempo=batch_tempo,
                         sound_texture=batch_sound_texture,
                         instrumental=batch_instrumental,
-                        style_override=citypop_style_override
+                        style_override=final_style_override
                     )
 
-    # 탭 4: 이전 생성곡 다시 받기
-    with tab4:
+    # 탭 5: 이전 생성곡 다시 받기
+    with tab5:
         # Artlist 스타일 CSS
         st.markdown("""
         <style>
@@ -665,6 +755,424 @@ def main():
             for song in all_songs:
                 render_library_song(song)
 
+    # 탭 3: 동시 대량 생성
+    with tab3:
+        st.header("동시 대량 생성")
+        st.info("2개의 다른 장르를 동시에 대량 생성합니다. 최대 20+20 = 40곡!")
+
+        # 진행 중인 작업 표시
+        pending_tasks = st.session_state.task_manager.get_pending_tasks()
+        if pending_tasks:
+            st.warning(f"⏳ 진행 중인 작업: {len(pending_tasks)}개")
+            for task in pending_tasks:
+                st.caption(f"• {task['title']} ({task['genre']}) - {task['status']}")
+
+        # 슬롯 1, 슬롯 2
+        col_slot1, col_slot2 = st.columns(2)
+
+        # 슬롯 1
+        with col_slot1:
+            st.subheader("🎵 슬롯 1")
+            slot1_enabled = st.checkbox("슬롯 1 활성화", value=True, key="slot1_enabled")
+
+            if slot1_enabled:
+                slot1_count = st.slider("곡 수", 1, 20, 10, key="slot1_count")
+
+                slot1_theme_mode = st.radio(
+                    "주제 방식",
+                    ["AI 랜덤 생성", "직접 입력"],
+                    key="slot1_theme_mode",
+                    horizontal=True
+                )
+
+                if slot1_theme_mode == "직접 입력":
+                    slot1_themes_input = st.text_area(
+                        "주제 목록 (한 줄에 하나)",
+                        placeholder="첫사랑의 설렘\n이별 후 성장\n여름 바다",
+                        height=100,
+                        key="slot1_themes"
+                    )
+                else:
+                    slot1_themes_input = ""
+
+                # 스타일 입력 방식
+                slot1_style_mode = st.radio(
+                    "스타일 방식",
+                    ["옵션 선택", "직접 입력"],
+                    key="slot1_style_mode",
+                    horizontal=True
+                )
+
+                slot1_style_direct = None
+                slot1_genre = None
+                slot1_mood = None
+
+                if slot1_style_mode == "직접 입력":
+                    if SUNO_PRESETS:
+                        slot1_preset_genre = st.selectbox(
+                            "🎸 프리셋 장르",
+                            ["직접 입력"] + list(SUNO_PRESETS.keys()),
+                            key="slot1_preset_genre"
+                        )
+                        if slot1_preset_genre != "직접 입력":
+                            slot1_preset_styles = SUNO_PRESETS[slot1_preset_genre]
+                            slot1_preset_name = st.selectbox(
+                                "🎵 스타일",
+                                list(slot1_preset_styles.keys()),
+                                key="slot1_preset_style"
+                            )
+                            slot1_selected = slot1_preset_styles[slot1_preset_name]
+                            slot1_style_direct = slot1_selected["style"]
+                            st.caption(f"⚡ {slot1_selected['energy']}/10")
+                        else:
+                            slot1_style_direct = st.text_area(
+                                "🎨 스타일 프롬프트",
+                                placeholder="K-pop, energetic, female vocal, synth",
+                                height=80,
+                                key="slot1_style_direct"
+                            )
+                    else:
+                        slot1_style_direct = st.text_area(
+                            "🎨 스타일 프롬프트",
+                            placeholder="K-pop, energetic, female vocal, synth",
+                            height=80,
+                            key="slot1_style_direct"
+                        )
+                    slot1_language = st.selectbox(
+                        "언어",
+                        ["Korean", "Japanese", "English"],
+                        key="slot1_language_direct"
+                    )
+                    slot1_gender = st.selectbox(
+                        "보컬",
+                        ["Random", "Female", "Male"],
+                        key="slot1_gender_direct"
+                    )
+                else:
+                    slot1_genre = st.selectbox(
+                        "장르",
+                        config.GENRE_LIST,
+                        key="slot1_genre"
+                    )
+                    slot1_mood = st.selectbox(
+                        "분위기",
+                        ["신나는", "로맨틱", "슬픈", "편안한", "강렬한", "몽환적"],
+                        key="slot1_mood"
+                    )
+                    slot1_language = st.selectbox(
+                        "언어",
+                        ["Korean", "Japanese", "English"],
+                        key="slot1_language"
+                    )
+                    slot1_gender = st.selectbox(
+                        "보컬",
+                        ["Random", "Female", "Male"],
+                        key="slot1_gender"
+                    )
+
+        # 슬롯 2
+        with col_slot2:
+            st.subheader("🎵 슬롯 2")
+            slot2_enabled = st.checkbox("슬롯 2 활성화", value=True, key="slot2_enabled")
+
+            if slot2_enabled:
+                slot2_count = st.slider("곡 수", 1, 20, 10, key="slot2_count")
+
+                slot2_theme_mode = st.radio(
+                    "주제 방식",
+                    ["AI 랜덤 생성", "직접 입력"],
+                    key="slot2_theme_mode",
+                    horizontal=True
+                )
+
+                if slot2_theme_mode == "직접 입력":
+                    slot2_themes_input = st.text_area(
+                        "주제 목록 (한 줄에 하나)",
+                        placeholder="새벽 감성\n비 오는 날\n그리움",
+                        height=100,
+                        key="slot2_themes"
+                    )
+                else:
+                    slot2_themes_input = ""
+
+                # 스타일 입력 방식
+                slot2_style_mode = st.radio(
+                    "스타일 방식",
+                    ["옵션 선택", "직접 입력"],
+                    key="slot2_style_mode",
+                    horizontal=True
+                )
+
+                slot2_style_direct = None
+                slot2_genre = None
+                slot2_mood = None
+
+                if slot2_style_mode == "직접 입력":
+                    if SUNO_PRESETS:
+                        slot2_preset_genre = st.selectbox(
+                            "🎸 프리셋 장르",
+                            ["직접 입력"] + list(SUNO_PRESETS.keys()),
+                            key="slot2_preset_genre"
+                        )
+                        if slot2_preset_genre != "직접 입력":
+                            slot2_preset_styles = SUNO_PRESETS[slot2_preset_genre]
+                            slot2_preset_name = st.selectbox(
+                                "🎵 스타일",
+                                list(slot2_preset_styles.keys()),
+                                key="slot2_preset_style"
+                            )
+                            slot2_selected = slot2_preset_styles[slot2_preset_name]
+                            slot2_style_direct = slot2_selected["style"]
+                            st.caption(f"⚡ {slot2_selected['energy']}/10")
+                        else:
+                            slot2_style_direct = st.text_area(
+                                "🎨 스타일 프롬프트",
+                                placeholder="Ballad, emotional, male vocal, piano",
+                                height=80,
+                                key="slot2_style_direct"
+                            )
+                    else:
+                        slot2_style_direct = st.text_area(
+                            "🎨 스타일 프롬프트",
+                            placeholder="Ballad, emotional, male vocal, piano",
+                            height=80,
+                            key="slot2_style_direct"
+                        )
+                    slot2_language = st.selectbox(
+                        "언어",
+                        ["Korean", "Japanese", "English"],
+                        key="slot2_language_direct"
+                    )
+                    slot2_gender = st.selectbox(
+                        "보컬",
+                        ["Random", "Female", "Male"],
+                        key="slot2_gender_direct"
+                    )
+                else:
+                    slot2_genre = st.selectbox(
+                        "장르",
+                        config.GENRE_LIST,
+                        index=1,  # 발라드 기본 선택
+                        key="slot2_genre"
+                    )
+                    slot2_mood = st.selectbox(
+                        "분위기",
+                        ["신나는", "로맨틱", "슬픈", "편안한", "강렬한", "몽환적"],
+                        index=2,  # 슬픈 기본 선택
+                        key="slot2_mood"
+                    )
+                    slot2_language = st.selectbox(
+                        "언어",
+                        ["Korean", "Japanese", "English"],
+                        key="slot2_language"
+                    )
+                    slot2_gender = st.selectbox(
+                        "보컬",
+                        ["Random", "Female", "Male"],
+                        key="slot2_gender"
+                    )
+
+        st.divider()
+
+        # 예상 크레딧 계산
+        total_songs = 0
+        if slot1_enabled:
+            total_songs += slot1_count
+        if slot2_enabled:
+            total_songs += slot2_count
+
+        estimated_credits = total_songs * 10
+        st.info(f"총 {total_songs}곡 · 예상 크레딧: {estimated_credits}")
+
+        if total_songs > 40:
+            st.warning("⚠️ 40곡 초과! 크레딧 제한에 걸릴 수 있습니다.")
+
+        # 동시 대량 생성 버튼
+        if st.button("🚀 동시 대량 생성 시작", type="primary", use_container_width=True):
+            if not slot1_enabled and not slot2_enabled:
+                st.warning("최소 하나의 슬롯을 활성화해주세요")
+            elif not st.session_state.suno_client:
+                st.error("먼저 API를 연결해주세요")
+            elif not st.session_state.prompt_generator:
+                st.error("먼저 API를 연결해주세요")
+            else:
+                # 슬롯 데이터 수집
+                slots_data = []
+
+                if slot1_enabled:
+                    if slot1_theme_mode == "직접 입력" and slot1_themes_input:
+                        themes1 = [t.strip() for t in slot1_themes_input.split("\n") if t.strip()][:slot1_count]
+                    else:
+                        themes1 = None  # AI가 생성
+                    slots_data.append({
+                        "genre": slot1_genre,
+                        "count": slot1_count,
+                        "themes": themes1,
+                        "mood": slot1_mood,
+                        "language": slot1_language,
+                        "gender": slot1_gender,
+                        "style_direct": slot1_style_direct if 'slot1_style_direct' in dir() else None
+                    })
+
+                if slot2_enabled:
+                    if slot2_theme_mode == "직접 입력" and slot2_themes_input:
+                        themes2 = [t.strip() for t in slot2_themes_input.split("\n") if t.strip()][:slot2_count]
+                    else:
+                        themes2 = None  # AI가 생성
+                    slots_data.append({
+                        "genre": slot2_genre,
+                        "count": slot2_count,
+                        "themes": themes2,
+                        "mood": slot2_mood,
+                        "language": slot2_language,
+                        "gender": slot2_gender,
+                        "style_direct": slot2_style_direct if 'slot2_style_direct' in dir() else None
+                    })
+
+                generate_batch_parallel(slots_data)
+
+
+def generate_batch_parallel(slots_data: list):
+    """동시 대량 생성 (2개씩 병렬 처리)"""
+    progress = st.progress(0, text="주제 생성 중...")
+    status_container = st.empty()
+
+    # 1. 각 슬롯의 주제 목록 준비
+    all_tasks = []  # [(genre, theme, mood, language, gender), ...]
+
+    for slot_idx, slot in enumerate(slots_data):
+        genre = slot.get("genre") or "기타"
+        count = slot["count"]
+        themes = slot.get("themes")
+        mood = slot.get("mood")
+        language = slot["language"]
+        gender = slot["gender"]
+        style_direct = slot.get("style_direct")
+
+        # 주제가 없으면 AI로 생성
+        if not themes:
+            slot_name = style_direct[:20] if style_direct else genre
+            status_container.info(f"🎲 슬롯 {slot_idx+1}: {slot_name} 주제 {count}개 생성 중...")
+            try:
+                themes = st.session_state.prompt_generator.generate_random_themes(count=count)
+            except Exception as e:
+                st.error(f"슬롯 {slot_idx+1} 주제 생성 실패: {e}")
+                themes = [f"노래 {i+1}" for i in range(count)]
+
+        # 주제 수가 부족하면 채우기
+        while len(themes) < count:
+            themes.append(f"노래 {len(themes)+1}")
+
+        # 태스크 목록에 추가
+        for theme in themes[:count]:
+            all_tasks.append({
+                "genre": genre,
+                "theme": theme,
+                "mood": mood,
+                "language": language,
+                "gender": gender,
+                "style_direct": style_direct
+            })
+
+    total_songs = len(all_tasks)
+    progress.progress(10, text=f"총 {total_songs}곡 준비 완료, 생성 시작...")
+
+    # 2. 2개씩 묶어서 동시 처리
+    success_count = 0
+    fail_count = 0
+
+    for i in range(0, total_songs, 2):
+        batch = all_tasks[i:i+2]  # 최대 2개
+        batch_num = i // 2 + 1
+        total_batches = (total_songs + 1) // 2
+
+        status_container.info(f"🎵 배치 {batch_num}/{total_batches}: {len(batch)}곡 동시 생성 중...")
+
+        # 비동기 요청
+        pending = []
+        for task_info in batch:
+            try:
+                # 프롬프트 생성
+                current_gender = task_info["gender"]
+                if current_gender == "Random":
+                    current_gender = random.choice(["Male", "Female"])
+
+                prompt_data = st.session_state.prompt_generator.generate_music_prompt(
+                    theme=task_info["theme"],
+                    genre=task_info.get("genre"),
+                    mood=task_info.get("mood"),
+                    language=task_info["language"],
+                    gender=current_gender,
+                    instrumental=False
+                )
+                prompt_data["theme"] = task_info["theme"]
+
+                # 직접 스타일 입력이 있으면 덮어쓰기
+                if task_info.get("style_direct"):
+                    prompt_data["style"] = task_info["style_direct"]
+
+                # Suno 요청
+                task_id = st.session_state.suno_client.generate_async(
+                    prompt=prompt_data.get("lyrics", ""),
+                    style=prompt_data.get("style", ""),
+                    title=prompt_data.get("title", "")
+                )
+
+                pending.append({
+                    "task_id": task_id,
+                    "prompt_data": prompt_data,
+                    "genre": task_info["genre"]
+                })
+
+                st.session_state.task_manager.add_task(task_id, prompt_data, task_info["genre"])
+
+            except Exception as e:
+                st.error(f"요청 실패 ({task_info['theme']}): {e}")
+                fail_count += 1
+
+        # 완료 대기 및 다운로드
+        for task in pending:
+            try:
+                clips = st.session_state.suno_client.wait_for_completion(task["task_id"])
+
+                for clip_index, clip in enumerate(clips):
+                    audio_url = clip.get("audio_url")
+                    if audio_url:
+                        save_path = st.session_state.music_manager.get_audio_path(
+                            task["prompt_data"].get("title", "song"),
+                            clip.get("id", ""),
+                            clip_index=clip_index
+                        )
+                        save_path, audio_data = st.session_state.suno_client.download_audio(audio_url, str(save_path))
+                        song_info = st.session_state.music_manager.save_song(
+                            clip_data=clip,
+                            prompt_data=task["prompt_data"],
+                            audio_path=str(save_path),
+                            audio_data=audio_data,
+                            genre=task["genre"]
+                        )
+
+                        if song_info.get("drive_upload"):
+                            st.caption(f"☁️ Drive: {task['genre']}/{'홀수' if clip_index == 0 else '짝수'}")
+
+                st.session_state.task_manager.complete_task(task["task_id"], clips)
+                success_count += 1
+
+            except Exception as e:
+                st.error(f"생성 실패 ({task['prompt_data'].get('title', 'Unknown')}): {e}")
+                st.session_state.task_manager.fail_task(task["task_id"], str(e))
+                fail_count += 1
+
+        # 진행률 업데이트
+        done = i + len(batch)
+        progress.progress(10 + int(90 * done / total_songs), text=f"{done}/{total_songs}곡 완료")
+
+        # Rate limit 방지
+        if i + 2 < total_songs:
+            time.sleep(2)
+
+    status_container.empty()
+    st.success(f"🎉 완료! 성공: {success_count}곡, 실패: {fail_count}곡")
 
 
 def refresh_audio_url(clip_id: str) -> str:
@@ -923,10 +1431,6 @@ def generate_single_song(prompt_data: dict):
                 )
 
                 # Drive 업로드 결과 표시
-                dm = st.session_state.music_manager.drive_manager
-                dm_connected = dm.is_connected() if dm else False
-                st.info(f"[DEBUG] drive_manager={dm is not None}, connected={dm_connected}, upload={song_info.get('drive_upload')}, err={song_info.get('drive_error')}")
-
                 if song_info.get("drive_upload"):
                     st.success(f"☁️ Drive 업로드 성공: {Path(save_path).name}")
                 elif song_info.get("drive_error"):

@@ -1,0 +1,103 @@
+{
+  "Pop": {
+    "Upbeat Dance Pop": {
+      "style": "Infectious pop anthem, female powerhouse vocals, pulsing 808 bass, synth-wave layers, euphoric build-ups, radio-ready polish, modern production, vocal harmonies on chorus, BPM: 128, Key: C Major",
+      "energy": 9,
+      "use_case": "Summer anthems, party songs, TikTok viral potential"
+    },
+    "Emotional Pop Ballad": {
+      "style": "Piano-driven ballad, raw emotional vocals, subtle string arrangements, builds from intimate verse to soaring chorus, modern radio production, reverb on vocals, stripped-down bridge, powerful final chorus, BPM: 72, Key: G Major",
+      "energy": 5,
+      "use_case": "Heartbreak songs, emotional storytelling"
+    },
+    "Indie Pop Vibe": {
+      "style": "Jangly indie-pop, warm lo-fi aesthetic, vintage synths, organic drums, bedroom recording charm, catchy but not over-produced, tape saturation warmth, imperfect and authentic, BPM: 115, Key: A Minor",
+      "energy": 4,
+      "use_case": "Authentic storytelling, chill vibes"
+    }
+  },
+  "Rock": {
+    "Stadium Rock Anthem": {
+      "style": "Massive power chords, arena rock production, anthemic chorus, driving rhythm section, guitar solo at 2:15, crowd-ready hooks, distorted guitars, thunderous drums, raw powerful vocals, BPM: 140, Key: E Minor",
+      "energy": 10,
+      "use_case": "Pump-up songs, sports anthems"
+    },
+    "Grunge Revival": {
+      "style": "Fuzzy distorted guitars, 90s grunge aesthetic, raw anguished vocals, dynamic quiet-loud structure, analog tape grit, genuine angst, stripped-down verse, explosive chorus, feedback and noise, BPM: 95, Key: D Minor",
+      "energy": 8,
+      "use_case": "Alternative rock, emotional release"
+    }
+  },
+  "Hip-Hop": {
+    "Modern Trap Banger": {
+      "style": "Hard-hitting 808s, menacing trap beat, rapid hi-hat rolls, atmospheric pads, dark melodic undertones, confident rap flow, ad-libs throughout, hard bass drop, modern rap production, BPM: 75, Key: F Minor",
+      "energy": 9,
+      "use_case": "Club tracks, aggressive rap"
+    },
+    "Chill Boom Bap": {
+      "style": "Classic boom bap drums, vinyl crackle, jazzy piano samples, laid-back smooth flow, storytelling rap, 90s hip-hop nostalgia, warm analog sound, deep bass, conscious lyrics vibe, BPM: 88, Key: Eb Major",
+      "energy": 5,
+      "use_case": "Storytelling rap, old-school vibes"
+    }
+  },
+  "Country": {
+    "Modern Country Pop": {
+      "style": "Twangy steel guitar, modern pop production, catchy hooks, warm heartfelt vocals, banjo accents, uplifting chorus, radio-friendly country, polished mix, relatable storytelling, BPM: 110, Key: G Major",
+      "energy": 7,
+      "use_case": "Radio country, crossover appeal"
+    },
+    "Outlaw Country Ballad": {
+      "style": "Raw acoustic guitar, whiskey-soaked vocals, harmonica, honest storytelling, outlaw country grit, minimal production, authentic emotion, walking bass line, vintage country sound, real and unpolished, BPM: 85, Key: A Major",
+      "energy": 4,
+      "use_case": "Authentic country, storytelling"
+    }
+  },
+  "EDM": {
+    "Festival Main Stage Banger": {
+      "style": "Massive synth drops, festival-ready energy, pulsing sub-bass, euphoric builds, sidechain compression, crowd-hyping elements, laser synths, punchy kicks, anthem-level production, BPM: 128, Key: C Minor",
+      "energy": 10,
+      "use_case": "Festival sets, club bangers"
+    },
+    "Melodic Progressive House": {
+      "style": "Emotional chord progressions, atmospheric builds, lush pads, melodic piano melodies, progressive house evolution, uplifting energy, clean modern production, vocal chops, BPM: 124, Key: A Minor",
+      "energy": 8,
+      "use_case": "Melodic sets, emotional journeys"
+    }
+  },
+  "R&B": {
+    "Modern R&B Groove": {
+      "style": "Smooth soulful vocals, trap-influenced R&B, sultry vibe, laid-back 808 bass, syncopated hi-hats, intimate production, lo-fi texture, bedroom R&B aesthetic, melismatic runs, BPM: 70, Key: Db Major",
+      "energy": 3,
+      "use_case": "Late-night vibes, romantic songs"
+    },
+    "Classic Soul Revival": {
+      "style": "Vintage soul production, powerful gospel-influenced vocals, live horn section, warm analog mix, Motown vibes, Hammond organ, dynamic vocal performance, authentic soul feel, BPM: 95, Key: F Major",
+      "energy": 7,
+      "use_case": "Throwback soul, powerful vocals"
+    }
+  },
+  "Indie": {
+    "Bedroom Pop Dreamy": {
+      "style": "Lo-fi bedroom production, dreamy vocals, jangly guitars, vintage synths, tape saturation, DIY charm, imperfect and intimate, nostalgic atmosphere, organic percussion, authentic and raw, BPM: 105, Key: Eb Major",
+      "energy": 3,
+      "use_case": "Intimate storytelling, chill vibes"
+    },
+    "Alternative Rock Edge": {
+      "style": "Angular guitar riffs, post-punk energy, driving bass lines, unconventional song structure, artistic experimentation, raw emotional delivery, indie rock attitude, gritty production, BPM: 130, Key: B Minor",
+      "energy": 8,
+      "use_case": "Art rock, experimental indie"
+    }
+  },
+  "Jazz": {
+    "Smooth Jazz Lounge": {
+      "style": "Sophisticated jazz vibes, brushed drums, upright bass, smooth saxophone, piano comping, intimate club atmosphere, late-night sophistication, improvised feel, mellow and refined, BPM: 92, Key: Bb Major",
+      "energy": 2,
+      "use_case": "Background music, sophisticated vibes"
+    },
+    "Chicago Blues Grit": {
+      "style": "12-bar blues progression, slide guitar wails, harmonica, raw authentic vocals, vintage blues feel, analog warmth, emotional guitar bends, walking bass, genuine blues soul, BPM: 80, Key: E Blues Scale",
+      "energy": 5,
+      "use_case": "Authentic blues, emotional storytelling"
+    }
+  }
+}
